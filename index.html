@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, user-scalable=no,maximum-scale=1.0, minimum-scale=1.0">
+    <title>Title</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        ul {
+            list-style: none;
+        }
+
+        html, body, #app {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        #header {
+            width: 100vw;
+            height: 10vh;
+            background-color: rgba(0, 0, 0, 0.8);
+            line-height: 10vh;
+            text-align: center;
+            color: white;
+            position: relative;
+            z-index: 10;
+        }
+
+        #main {
+            width: 100vw;
+            height: 90vh;
+            position: relative;
+        }
+
+        #main #content {
+            height: auto;
+        }
+
+        #main #content #bottom {
+            height: 20vh;
+            width: 100vw;
+            line-height: 20vh;
+            position: absolute;
+            bottom: -20vh;
+            color: black;
+            text-align: center;
+
+        }
+
+        #main #content #images {
+            overflow: hidden;
+        }
+
+        #main #content #images li {
+            width: 44vw;
+            height: 44vw;
+            border-radius: 3vw;
+            overflow: hidden;
+            float: left;
+            margin: 3vw;
+            background: #eee;
+            background: url("./img/loadingImg.gif") no-repeat center;
+        }
+
+        #content #images li img {
+            width: 100%;
+            display: block;
+            opacity: 0;
+            transition: opacity 2s;
+        }
+
+        .scroll-bar {
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: 4px;
+            height: 100px;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 10;
+        }
+
+        #app .preview {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            left: 0;
+            top: 0;
+            z-index: 20;
+            background: white;
+            transform: scale(0);
+            transition: transform 1s;
+        }
+
+        #app .preview .header {
+            height: 10vh;
+            width: 100vw;
+            background: black;
+            text-align: center;
+            color: white;
+            font-family: '宋体';
+            font-size: 18px;
+            font-weight: normal;
+            line-height: 10vh;
+            position: relative;
+        }
+
+        #app .preview .header .close {
+            position: absolute;
+            right: 10px;
+        }
+
+        .preview .content {
+            height: 90vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+    </style>
+</head>
+<body>
+<div id="app">
+    <header id="header">三国女将</header>
+    <section id="main">
+        <div id="content">
+            <ul id="images">
+            </ul>
+            <div id="bottom">上拉加载更多...</div>
+        </div>
+        <div class="scroll-bar"></div>
+    </section>
+    <div class="preview">
+        <div class="header">
+            大图预览
+            <span class="close">&times;</span>
+        </div>
+        <div class="content">
+            <div id="big-image">
+                <img id="bimage" src="./img/1.jpg" alt="">
+            </div>
+        </div>
+    </div>
+</div>
+<script type="text/javascript" src="./js/transformCSS.js"></script>
+<script type="text/javascript" src="./js/tweenAnimation.js"></script>
+<script type="text/javascript" src="./js/touchscroll.js"></script>
+<script type="text/javascript" src="./js/touchview.js"></script>
+<script type="text/javascript">
+    var app = document.getElementById('app');
+    var main = document.querySelector('#main');
+    var content = main.querySelector('#content');
+    var ul = content.querySelector('#images');
+    var bottom = document.querySelector('#bottom');
+    var preview = document.querySelector('.preview');
+    var close = document.querySelector('.close');
+    var bimage = document.querySelector('#bimage');
+    var bigImage = document.querySelector('#big-image');
+    var arr = [];
+    var len = 50;
+    var index = 0;
+    var isFirst = true;//判断是不是第一次加载
+    var isScroll = false; //判断是否在滚动
+    function init() {
+        for (var i = 0; i < len; i++) {
+            // var src = './img/' + (i % 18+1) + '.jpg';
+            //为了测试img加载失败情况
+            var src = './img/' + (i % 18 + 1) + '.jpg';
+            arr.push(src);
+        }
+    }
+
+    init();
+
+    function creatLi() {
+        // 0        14
+        // 14       28
+        // 28       42
+        // 42       56
+        var end = index + 14;
+        for (var i = index; i < end; i++) {
+            if (i >= len) {
+                bottom.innerHTML = '没有数据了...';
+                break;
+            }
+            var li = document.createElement('li');
+            /*  var img = document.createElement('img');
+              img.src = arr[i];
+              li.appendChild(img);*/
+            li.dataset.src = arr[i];
+            li.hasLoaded = false;//标记有没有被加载过
+            images.appendChild(li);
+        }
+        lazyLoad();
+        if (!isFirst) {
+            touhscroll.init();
+        }
+        isFirst = false;
+        index = end;
+    }
+
+    creatLi();
+    var touhscroll = new Touchscroll('#main', '#content', {
+        move: function () {
+            isScroll = true;
+            lazyLoad();
+            //获取当前的比例
+            var mainTranslateY = -(content.offsetHeight - main.offsetHeight);
+            var currentTranslateY = transformCSS(content, 'translateY');
+            if (currentTranslateY < mainTranslateY) {
+                //获取距离差
+                var disY = mainTranslateY - currentTranslateY;
+                var scale = Math.min(disY / bottom.offsetHeight, 1);
+                // console.log(scale);
+                transformCSS(bottom, 'scale', scale);
+
+            }
+        },
+        end: function () {
+            isScroll = false;
+            var mainTranslateY = -(content.offsetHeight - main.offsetHeight);
+            var currentTranslateY = transformCSS(content, 'translateY');
+            var disY = mainTranslateY - currentTranslateY;
+            if (disY > bottom.offsetHeight) {
+                creatLi();
+            }
+        }
+    });
+
+    function lazyLoad() {
+        var lis = images.querySelectorAll('li');
+        lis.forEach(function (li) {
+            if (li.hasLoaded) return;
+            //获取尺寸  滚动距离
+            var translateY = Math.abs(transformCSS(content, 'translateY'));
+            //获取可见区域的高度
+            var mainHeight = main.offsetHeight;
+            //获取元素距离父级元素顶部的距离
+            var liTop = li.offsetTop;
+            if (liTop < mainHeight + translateY - 20 && (liTop + li.offsetHeight > translateY)) {
+                var img = document.createElement('img');
+                img.src = li.dataset.src;
+                img.addEventListener('load', function () {
+                    img.style.opacity = 1;
+                });
+                img.addEventListener('error', function () {
+                    img.src = './img/noimage.png';
+                });
+                li.appendChild(img);
+                li.hasLoaded = true;
+            }
+        });
+    }
+
+    images.addEventListener('touchend', function (e) {
+        // console.log(e);
+        if (isScroll) return;
+        if (e.target.nodeName === 'IMG') {
+            var src = e.target.src;
+            bimage.src = src;
+            transformCSS(preview, 'scale', 1);
+            var x = e.changedTouches[0].clientX;
+            var y = e.changedTouches[0].clientY;
+            //设置变形的起始点
+            preview.style.transformOrigin = x + 'px ' + y + 'px';
+        }
+    });
+    close.addEventListener('touchstart', function () {
+        transformCSS(preview, 'scale', 0);
+        //关闭之后还原图片的状态
+        transformCSS(bigImage, 'scale', 1);
+        transformCSS(bigImage, 'rotate', 0);
+    });
+    new Touchview(bigImage);
+</script>
+</body>
+</html>
